@@ -177,6 +177,8 @@ func scanIdent(s *Scanner) state {
 	switch s.lexeme() {
 	case "if":
 		typ = token.If
+	case "else":
+		typ = token.Else
 	case "while":
 		typ = token.While
 	case "return":

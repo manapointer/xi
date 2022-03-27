@@ -7,6 +7,12 @@ import (
 	"github.com/manapointer/xi/pkg/ast"
 )
 
+type Mode int
+
+const (
+	Trace Mode = (1 << iota)
+)
+
 func readSource(filename string, src interface{}) ([]byte, error) {
 	switch t := src.(type) {
 	case []byte:
@@ -20,8 +26,8 @@ func readSource(filename string, src interface{}) ([]byte, error) {
 	return ioutil.ReadFile(filename)
 }
 
-func ParseFile(filename string, src interface{}) (*ast.File, error) {
-	_, err := readSource(filename, src)
+func ParseFile(filename string, src interface{}, mode Mode) (file *ast.File, err error) {
+	_, err = readSource(filename, src)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +38,19 @@ func ParseFile(filename string, src interface{}) (*ast.File, error) {
 	}
 
 	var p parser
-	p.init(filename, content)
+	defer func() {
+		if e := recover(); e != nil {
+			switch t := e.(type) {
+			case error:
+				file = nil
+				err = t
+			default:
+				panic(e)
+			}
+		}
+	}()
+
+	p.init(filename, content, mode)
 
 	f := p.parseFile()
 	return f, nil

@@ -79,24 +79,31 @@ func (*ArrayLit) exprNode()      {}
 func (*CallExpr) exprNode()      {}
 func (*CallExpr) stmtNode()      {}
 func (*SubscriptExpr) exprNode() {}
-
-type Spec struct {
-	Name *Ident
-	Type Type
-}
+func (*UnaryExpr) exprNode()     {}
+func (*BinaryExpr) exprNode()    {}
 
 type Lvalue interface {
 	Node
 	lvalueNode()
 }
 
-type Discard struct {
-	Tok token.Token
-}
-
 func (*Ident) lvalueNode()         {}
 func (*SubscriptExpr) lvalueNode() {}
-func (*Discard) lvalueNode()       {}
+
+type Assignable interface {
+	Node
+	assignableNode()
+}
+
+type Discard struct{}
+
+type Spec struct {
+	Name *Ident
+	Type Type
+}
+
+func (*Discard) assignableNode() {}
+func (*Spec) assignableNode()    {}
 
 type (
 	AssignStmt struct {
@@ -128,19 +135,25 @@ type (
 		Init Expr
 	}
 
+	SingleDiscardStmt struct {
+		Discard *Discard
+		Init    *CallExpr
+	}
+
 	MultiDeclStmt struct {
-		Specs []*Spec
-		Init  *CallExpr
+		Assignables []Assignable
+		Init        *CallExpr
 	}
 )
 
-func (*AssignStmt) stmtNode()     {}
-func (*IfStmt) stmtNode()         {}
-func (*WhileStmt) stmtNode()      {}
-func (*ReturnStmt) stmtNode()     {}
-func (*BlockStmt) stmtNode()      {}
-func (*SingleDeclStmt) stmtNode() {}
-func (*MultiDeclStmt) stmtNode()  {}
+func (*AssignStmt) stmtNode()        {}
+func (*IfStmt) stmtNode()            {}
+func (*WhileStmt) stmtNode()         {}
+func (*ReturnStmt) stmtNode()        {}
+func (*BlockStmt) stmtNode()         {}
+func (*SingleDeclStmt) stmtNode()    {}
+func (*SingleDiscardStmt) stmtNode() {}
+func (*MultiDeclStmt) stmtNode()     {}
 
 type (
 	FuncDecl struct {

@@ -20,6 +20,7 @@ import (
 type diagnosticOptions struct {
 	lex   bool
 	parse bool
+	trace bool
 }
 
 func NewDiagnosticCmd() *cobra.Command {
@@ -81,6 +82,14 @@ func (opts *diagnosticOptions) runLex(files []string) error {
 	return nil
 }
 
+func (opts *diagnosticOptions) mode() (mode parser.Mode) {
+	if opts.parse {
+		mode |= parser.Trace
+	}
+
+	return
+}
+
 func (opts *diagnosticOptions) runParse(files []string) error {
 	for _, file := range files {
 		f, err := openDiagnosticFile(file, ".parsed")
@@ -89,7 +98,7 @@ func (opts *diagnosticOptions) runParse(files []string) error {
 		}
 		defer f.Close()
 
-		astf, err := parser.ParseFile(file, nil)
+		astf, err := parser.ParseFile(file, nil, opts.mode())
 		if err != nil {
 			fmt.Fprint(f, err)
 			return err
