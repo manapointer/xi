@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/manapointer/xi/cmd/xi/diagnostic"
+	"github.com/manapointer/xi/cmd/xi/xls"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +25,7 @@ func newRootCommand() *cobra.Command {
 
 	cmd.AddCommand(
 		diagnostic.NewDiagnosticCmd(),
+		xls.NewXlsCommand(),
 	)
 
 	return cmd
