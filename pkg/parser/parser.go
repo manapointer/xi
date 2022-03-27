@@ -313,7 +313,7 @@ func (p *parser) parseBaseExpr() ast.Expr {
 	switch p.tok {
 	case token.Ident:
 		return p.parseIdent()
-	case token.Integer, token.String, token.True, token.False:
+	case token.Integer, token.String, token.True, token.False, token.Char:
 		lit := ast.BasicLit{Kind: p.tok, Value: p.lit}
 		p.next()
 		return &lit
@@ -444,12 +444,13 @@ func (p *parser) parseAssignStmt(ident0 *ast.Ident) *ast.AssignStmt {
 	return &ast.AssignStmt{Lhs: lvalue, Rhs: expr}
 }
 
-func (p *parser) parseIf() *ast.IfStmt {
+func (p *parser) parseIfStmt() *ast.IfStmt {
 	if p.trace {
 		defer un(trace(p, "If"))
 	}
 
 	p.expect(token.If)
+
 	cond := p.parseExpr()
 	then := p.parseStmt()
 
@@ -462,14 +463,16 @@ func (p *parser) parseIf() *ast.IfStmt {
 	return &ast.IfStmt{Cond: cond, Then: then, Else: else_}
 }
 
-func (p *parser) parseWhile() *ast.WhileStmt {
+func (p *parser) parseWhileStmt() *ast.WhileStmt {
 	if p.trace {
 		defer un(trace(p, "While"))
 	}
 
 	p.expect(token.While)
+
 	cond := p.parseExpr()
 	body := p.parseStmt()
+
 	return &ast.WhileStmt{Cond: cond, Body: body}
 }
 
@@ -543,14 +546,14 @@ func (p *parser) parseStmt() ast.Stmt {
 		case token.Lparen:
 			return p.parseCallExpr(ident0)
 		default:
-			panic(fmt.Sprintf("unexpected token in stmt: %s", p.tok))
+			panic(fmt.Errorf("unexpected token in stmt: %s", p.tok))
 		}
 	case token.Underscore:
 		return p.parseDeclStmt(p.parseDiscard())
 	case token.If:
-		return p.parseIf()
+		return p.parseIfStmt()
 	case token.While:
-		return p.parseWhile()
+		return p.parseWhileStmt()
 	case token.Return:
 		return p.parseReturn()
 	case token.Lbrace:

@@ -37,6 +37,7 @@ func NewDiagnosticCmd() *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&opts.lex, "lex", false, "Output lexing information")
 	flags.BoolVar(&opts.parse, "parse", false, "Output parsing information")
+	flags.BoolVar(&opts.trace, "trace", false, "Trace parsing")
 
 	return cmd
 }
@@ -83,7 +84,7 @@ func (opts *diagnosticOptions) runLex(files []string) error {
 }
 
 func (opts *diagnosticOptions) mode() (mode parser.Mode) {
-	if opts.parse {
+	if opts.trace {
 		mode |= parser.Trace
 	}
 
