@@ -97,6 +97,10 @@ func (p *parser) parseArrayLit() *ast.ArrayLit {
 
 	for p.tok != token.Rbrace && p.tok != token.Eof {
 		elts = append(elts, p.parseExpr())
+		if p.tok != token.Comma {
+			break
+		}
+		p.next()
 	}
 
 	p.expect(token.Rbrace)
@@ -115,11 +119,19 @@ func (p *parser) parseType() ast.Type {
 	var typ ast.Type = &ast.PrimitiveType{Kind: p.tok}
 
 	p.next()
+
 	for p.tok == token.Lbrack {
 		p.next()
+
+		var size ast.Expr
+		if p.tok != token.Rbrack {
+			size = p.parseExpr()
+		}
+
 		p.expect(token.Rbrack)
 		typ = &ast.ArrayType{
-			Elt: typ,
+			Elt:  typ,
+			Size: size,
 		}
 	}
 
@@ -133,7 +145,7 @@ func (p *parser) parseCallExpr(ident0 *ast.Ident) *ast.CallExpr {
 
 	p.expect(token.Lparen)
 
-	var args = make([]ast.Expr, 0)
+	var args []ast.Expr
 
 	if p.tok != token.Rparen {
 		for {
@@ -174,9 +186,43 @@ func (p *parser) parseSubscriptExpr(lhs ast.Expr) *ast.SubscriptExpr {
 	return expr
 }
 
+func (p *parser) parseLengthExpr(tok token.TokenType) ast.Expr {
+	if p.trace {
+		defer un(trace(p, "LengthExpr"))
+	}
+
+	p.expect(token.Lparen)
+
+	arg := p.parseExpr()
+
+	p.expect(token.Rparen)
+
+	return &ast.LengthExpr{
+		Tok: tok,
+		Arg: arg,
+	}
+}
+
 func (p *parser) parseExpr() ast.Expr {
+	return p.parseExpr0(true)
+}
+
+func (p *parser) parseExpr0(strict bool) (expr ast.Expr) {
 	if p.trace {
 		defer un(trace(p, "Expr"))
+	}
+
+	if !strict {
+		defer func() {
+			if e := recover(); e != nil {
+				switch e.(type) {
+				case error:
+					expr = nil
+				default:
+					panic(e)
+				}
+			}
+		}()
 	}
 
 	return p.parseOrExpr()
@@ -279,6 +325,12 @@ func (p *parser) parseUnaryExpr() ast.Expr {
 }
 
 func (p *parser) parseCallOrSubscriptExpr() ast.Expr {
+	if p.tok == token.Length {
+		tok := p.tok
+		p.next()
+		return p.parseLengthExpr(tok)
+	}
+
 	lhs := p.parseBaseExpr()
 
 loop:
@@ -287,7 +339,7 @@ loop:
 		case token.Lbrack:
 			p.next()
 			expr := p.parseOrExpr()
-			p.expect(token.Rbrace)
+			p.expect(token.Rbrack)
 			lhs = &ast.SubscriptExpr{
 				Lhs:       lhs,
 				Subscript: expr,
@@ -364,23 +416,21 @@ func (p *parser) parseDeclStmtSpec(spec *ast.Spec) ast.Stmt {
 		defer un(trace(p, "DeclStmtSpec"))
 	}
 
-	assigns := []ast.Assignable{spec}
+	var assigns []ast.Assignable
 
 	if p.tok == token.Comma {
+		assigns = append(assigns, spec)
 		for p.tok == token.Comma {
 			p.next()
 			assigns = append(assigns, p.parseAssignable())
 		}
-	}
-
-	if len(assigns) == 1 {
+	} else {
+		var init ast.Expr
 		if p.tok == token.Assign {
 			p.next()
-			expr := p.parseExpr()
-			return &ast.SingleDeclStmt{Spec: spec, Init: expr}
-		} else {
-			return &ast.SingleDeclStmt{Spec: spec, Init: nil}
+			init = p.parseExpr()
 		}
+		return &ast.SingleDeclStmt{Spec: spec, Init: init}
 	}
 
 	return p.parseMultiDeclStmt(assigns)
@@ -484,7 +534,7 @@ func (p *parser) parseReturn() *ast.ReturnStmt {
 	p.expect(token.Return)
 
 	vals := make([]ast.Expr, 0)
-	val := p.parseExpr()
+	val := p.parseExpr0(false)
 
 	if val != nil {
 		vals = append(vals, val)
@@ -492,6 +542,8 @@ func (p *parser) parseReturn() *ast.ReturnStmt {
 			if p.tok != token.Comma {
 				break
 			}
+
+			p.next()
 
 			vals = append(vals, p.parseExpr())
 		}
@@ -541,7 +593,7 @@ func (p *parser) parseStmt() ast.Stmt {
 		switch p.tok {
 		case token.Colon:
 			return p.parseDeclStmt(ident0)
-		case token.Assign:
+		case token.Assign, token.Lbrack:
 			return p.parseAssignStmt(ident0)
 		case token.Lparen:
 			return p.parseCallExpr(ident0)
@@ -581,7 +633,6 @@ func (p *parser) parseParameters() []*ast.Spec {
 		}
 
 		p.next()
-
 	}
 
 	p.expect(token.Rparen)

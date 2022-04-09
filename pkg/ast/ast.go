@@ -30,7 +30,8 @@ type (
 	}
 
 	ArrayType struct {
-		Elt Type
+		Elt  Type
+		Size Expr
 	}
 )
 
@@ -56,6 +57,11 @@ type (
 		Args []Expr
 	}
 
+	LengthExpr struct {
+		Tok token.TokenType
+		Arg Expr
+	}
+
 	SubscriptExpr struct {
 		Lhs       Expr
 		Subscript Expr
@@ -77,6 +83,7 @@ func (*Ident) exprNode()         {}
 func (*BasicLit) exprNode()      {}
 func (*ArrayLit) exprNode()      {}
 func (*CallExpr) exprNode()      {}
+func (*LengthExpr) exprNode()    {}
 func (*CallExpr) stmtNode()      {}
 func (*SubscriptExpr) exprNode() {}
 func (*UnaryExpr) exprNode()     {}
@@ -135,25 +142,19 @@ type (
 		Init Expr
 	}
 
-	SingleDiscardStmt struct {
-		Discard *Discard
-		Init    *CallExpr
-	}
-
 	MultiDeclStmt struct {
 		Assignables []Assignable
 		Init        *CallExpr
 	}
 )
 
-func (*AssignStmt) stmtNode()        {}
-func (*IfStmt) stmtNode()            {}
-func (*WhileStmt) stmtNode()         {}
-func (*ReturnStmt) stmtNode()        {}
-func (*BlockStmt) stmtNode()         {}
-func (*SingleDeclStmt) stmtNode()    {}
-func (*SingleDiscardStmt) stmtNode() {}
-func (*MultiDeclStmt) stmtNode()     {}
+func (*AssignStmt) stmtNode()     {}
+func (*IfStmt) stmtNode()         {}
+func (*WhileStmt) stmtNode()      {}
+func (*ReturnStmt) stmtNode()     {}
+func (*BlockStmt) stmtNode()      {}
+func (*SingleDeclStmt) stmtNode() {}
+func (*MultiDeclStmt) stmtNode()  {}
 
 type (
 	FuncDecl struct {
